@@ -2,8 +2,8 @@
 
 readonly SPORTS1M_DIR="sports-1m-dataset"
 readonly OUTPUT_DIR="data"
-readonly SECONDS_PER_SAMPLE=2
-readonly N_SAMPLES=5
+readonly SECONDS_PER_CLIP=2
+readonly N_CLIPS=5
 readonly URL_LIST_DIR="${SPORTS1M_DIR}/original"
 readonly URL_LIST_SUFFIX="_partition.txt"
 readonly OUTPUT_VIDEO_SCALE="171:128"
@@ -66,7 +66,7 @@ function split_video_into_clips() {
     local video="$1"
     local fps="$2"
     local clip_dir="$3"
-    local frames_per_sample=$((SECONDS_PER_SAMPLE * fps))
+    local frames_per_clip=$((SECONDS_PER_CLIP * fps))
     local frame_dir="${TMPDIR}"
     local frame_format="frame%06d.jpg"
 
@@ -75,7 +75,7 @@ function split_video_into_clips() {
            -vf scale="$OUTPUT_VIDEO_SCALE"\
            "${frame_dir}/$frame_format"
 
-    /usr/bin/env python3 extract_clips.py "$frame_dir" "$clip_dir" $frames_per_sample $N_SAMPLES
+    /usr/bin/env python3 extract_clips.py "$frame_dir" "$clip_dir" $frames_per_clip $N_CLIPS
 
     set +x
     rm "${TMPDIR}/frame"*
@@ -150,7 +150,7 @@ done
 #           "$clip_output" || return 1
 #
 #    count=0
-#    for clip in $(find ${video_dir} -name "clip*" | shuf | head -$N_SAMPLES); do
+#    for clip in $(find ${video_dir} -name "clip*" | shuf | head -$N_CLIPS); do
 #        clip_dir="${video_dir}/$count"
 #        mkdir "$clip_dir"
 #        ffmpeg -v error\
@@ -160,7 +160,7 @@ done
 #        let ++count
 #    done
 #
-#    #python extract_vid.py "$video_dir" $frames_per_sample $N_SAMPLES || return 1
+#    #python extract_vid.py "$video_dir" $frames_per_clip $N_CLIPS || return 1
 #
 #    set +x
 #    rm "$video" "${video_dir}/clip"* 2>&-||:
