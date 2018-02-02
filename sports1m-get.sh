@@ -75,7 +75,7 @@ function split_video_into_clips() {
            -vf scale="$OUTPUT_VIDEO_SCALE"\
            "${frame_dir}/$frame_format"
 
-    python extract_clips.py "$frame_dir" "$clip_dir" $frames_per_sample $N_SAMPLES
+    /usr/bin/env python3 extract_clips.py "$frame_dir" "$clip_dir" $frames_per_sample $N_SAMPLES
 
     set +x
     rm "${TMPDIR}/frame"*
