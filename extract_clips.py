@@ -3,6 +3,7 @@
 
 import os,random,re,sys
 import os.path as path
+import shutil
 from glob import glob
 
 def _resize_frame_tensor(frame_tensor,target_shape):
@@ -43,4 +44,4 @@ for i,interval in enumerate(intervals):
     os.makedirs(output_dir)
     for j,frame in enumerate(file_list[interval]):
         output_file = "{:03d}.{:s}".format(j,frame.rsplit('.',1)[-1])
-        os.rename(frame,path.join(output_dir,output_file))
+        shutil.copy(frame,path.join(output_dir,output_file))
