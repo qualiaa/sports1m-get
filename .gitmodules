@@ -1,0 +1,3 @@
+[submodule "sports-1m-dataset"]
+	path = sports-1m-dataset
+	url = git@github.com:gtoderici/sports-1m-dataset
