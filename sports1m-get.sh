@@ -75,13 +75,22 @@ function split_video_into_clips() {
            -vf scale="$OUTPUT_VIDEO_SCALE"\
            "${frame_dir}/$frame_format"
 
-    /usr/bin/env python3 extract_clips.py "$frame_dir" "$clip_dir" $frames_per_clip $N_CLIPS
+    set +e
+    env python3 extract_clips.py "$frame_dir" "$clip_dir" $frames_per_clip $N_CLIPS
+    res=$?
+    set -e
 
-    set +x
+    # clean up frame files
     find "${TMPDIR}" -name "frame*" -print0 | xargs -0 rm
-    set -x
+    return $res
 }
 
+function skip_video() {
+    case $? in
+        2) touch "$1"; continue ;;
+        *) exit 1
+    esac
+}
 
 function process_url_list() {
     local url_list="$1"
@@ -95,18 +104,15 @@ function process_url_list() {
         if [ ! -e "$clip_dir" ]; then
             set +e
             # you-get behaves oddly in a subshell
-            download_video "$url" || case $? in
-                    2) touch "$clip_dir"; continue ;;
-                    *) exit
-                esac
+            download_video "$url" || skip_video "$clip_dir"
             local video=$(echo "${TMPDIR}/video."*)
             set -e
             local fps=$(get_fps "$video") # XXX: this always has exit code 0?
             valid_fps "$fps"
-            split_video_into_clips "$video" "$fps" "$clip_dir"
+            split_video_into_clips "$video" "$fps" "$clip_dir" || skip_video "$clip_dir"
             rm "$video"
         fi
-    done 3<<<"$(cut -d' ' -f1 "$url_list" | head -100)"
+    done 3<<<"$(cut -d' ' -f1 "$url_list")"
     #done 3<"$TMPDIR/vidlist"
 }
 

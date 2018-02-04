@@ -1,5 +1,5 @@
 # call as 
-# python extract_clips.py $video_folder $frames_per_sample $n_samples
+# python extract_clips.py $frame_folder $output_folder $frames_per_sample $n_samples
 
 import os,random,re,sys
 import os.path as path
@@ -35,9 +35,12 @@ frames_per_sample,n_samples = [int(a) for a in sys.argv[3:]]
 file_list = glob(path.join(frame_folder,"frame*"))
 file_list.sort(key=lambda x: int(re.search("frame([0-9]{6})",x)[1]))
 
-intervals = random_intervals(population_size=len(file_list),
-                             sample_size=frames_per_sample,
-                             n_samples=n_samples)
+try:
+    intervals = random_intervals(population_size=len(file_list),
+                                 sample_size=frames_per_sample,
+                                 n_samples=n_samples)
+except ValueError:
+    sys.exit(2)
 
 for i,interval in enumerate(intervals):
     output_dir = path.join(clip_folder,str(i))
