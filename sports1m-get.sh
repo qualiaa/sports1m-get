@@ -42,7 +42,7 @@ function get_fps() {
     if ! valid_fps "$fps"; then
         fps=$(fps_method_2 "$video")
         if ! valid_fps "$fps"; then
-            # ffmpeg -i "$video"
+            ffmpeg -i "$video"
             echo "$fps"
             return 1
         fi
@@ -53,7 +53,7 @@ function get_fps() {
 function download_video() {
     local url="$1"
 
-    you-get --no-caption -o "$TMPDIR" -O video "$url" 2>"$ERRFILE" || {
+    you-get --force --no-caption -o "$TMPDIR" -O video "$url" 2>"$ERRFILE" || {
         if grep -Eq "unavailable|copyright infringement|no longer available" "$ERRFILE"; then
             return 2
         fi
@@ -86,7 +86,8 @@ function split_video_into_clips() {
 }
 
 function skip_video() {
-    case $? in
+    local res=${2:-$?}
+    case $res in
         2) touch "$1"; continue ;;
         *) exit 1
     esac
@@ -109,8 +110,12 @@ function process_url_list() {
             set -e
             local fps=$(get_fps "$video") # XXX: this always has exit code 0?
             valid_fps "$fps"
-            split_video_into_clips "$video" "$fps" "$clip_dir" || skip_video "$clip_dir"
+            set +e
+            split_video_into_clips "$video" "$fps" "$clip_dir"
+            set -e
+            local res=$?
             rm "$video"
+            [ $res -eq 0 ] || skip_video "$clip_dir" $res
         fi
     done 3<<<"$(cut -d' ' -f1 "$url_list")"
     #done 3<"$TMPDIR/vidlist"
