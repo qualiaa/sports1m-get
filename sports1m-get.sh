@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/usr/bin/env bash
 
 readonly SPORTS1M_DIR="sports-1m-dataset"
 readonly OUTPUT_DIR="data"
@@ -106,7 +106,8 @@ function process_url_list() {
             split_video_into_clips "$video" "$fps" "$clip_dir"
             rm "$video"
         fi
-    done 3<<<$(cut -d' ' -f1 "$url_list" | head -100)
+    done 3<<<"$(cut -d' ' -f1 "$url_list" | head -100)"
+    #done 3<"$TMPDIR/vidlist"
 }
 
 
