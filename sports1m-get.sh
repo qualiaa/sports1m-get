@@ -78,7 +78,7 @@ function split_video_into_clips() {
     /usr/bin/env python3 extract_clips.py "$frame_dir" "$clip_dir" $frames_per_clip $N_CLIPS
 
     set +x
-    rm "${TMPDIR}/frame"*
+    find "${TMPDIR}" -name "frame*" -print0 | xargs -0 rm
     set -x
 }
 
@@ -101,7 +101,7 @@ function process_url_list() {
                 esac
             local video=$(echo "${TMPDIR}/video."*)
             set -e
-            local fps=$(get_fps "$video") # XXX: this always returns 0?
+            local fps=$(get_fps "$video") # XXX: this always has exit code 0?
             valid_fps "$fps"
             split_video_into_clips "$video" "$fps" "$clip_dir"
             rm "$video"
