@@ -118,7 +118,7 @@ function process_url_list() {
 
 
 ! mkdir "$OUTPUT_DIR" 2>&-
-! mkdir "$TMPDIR" 2>&1
+! mkdir "$TMPDIR" 2>&-
 
 #for dataset in train test; do
 for dataset in train; do
