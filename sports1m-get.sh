@@ -11,13 +11,23 @@ readonly OUTPUT_VIDEO_SCALE="171:128"
 readonly ERRFILE=err.log
 readonly TMPDIR=$(mktemp -d)
 
-set -xeuo pipefail 
+
+readonly YOUTUBE_ERRORS="copyright grounds|removed|in your country|duplicate|unavailable|copyright infringement|available"
+
+
+set -euo pipefail 
 
 function cleanup() {
+    if [ $? -ne 0 ]; then
+        echo "Abnormal exit"
+    fi
     rm -r "$TMPDIR"
 }
 trap cleanup EXIT
 
+function is_video() {
+    ffprobe -i "$1" -hide_banner 2>&1 | grep -q "Stream .*: Video"
+}
 function valid_fps() {
     local fps="$1"
     local re='^[0-9]+$'
@@ -44,22 +54,34 @@ function get_fps() {
         if ! valid_fps "$fps"; then
             ffmpeg -i "$video"
             echo "$fps"
-            return 1
+            exit 1
         fi
     fi
     echo $fps
 }
 
+function _dl_command() {
+    you-get --force --no-caption -o "$TMPDIR" -O video "$1"
+}
+
 function download_video() {
     local url="$1"
 
-    you-get --force --no-caption -o "$TMPDIR" -O video "$url" 2>"$ERRFILE" || {
-        if grep -Eq "unavailable|copyright infringement|no longer available" "$ERRFILE"; then
-            return 2
+
+    if ! _dl_command "$url" 2>"$ERRFILE"; then
+        if grep -Eq "$YOUTUBE_ERRORS" "$ERRFILE"; then
+            return 1
+        elif grep -Eq " oops," "$ERRFILE"; then
+            local retries=1
+            while ! _dl_command "$url" 2>/dev/null; do
+                echo "Attempt $((2 - retries))"
+                let --retries || return 1
+            done
+        else
+            exit 1
         fi
-        return 1
-    }
-    echo "${TMPDIR}/video."*
+    fi
+    #echo "${TMPDIR}/video."*
 }
 
 function split_video_into_clips() {
@@ -75,49 +97,62 @@ function split_video_into_clips() {
            -vf scale="$OUTPUT_VIDEO_SCALE"\
            "${frame_dir}/$frame_format"
 
-    set +e
     env python3 extract_clips.py "$frame_dir" "$clip_dir" $frames_per_clip $N_CLIPS
     res=$?
-    set -e
 
     # clean up frame files
     find "${TMPDIR}" -name "frame*" -print0 | xargs -0 rm
+    [ $res -eq 0 -o $res -eq 2 ] || exit 1
+
     return $res
 }
 
 function skip_video() {
-    local res=${2:-$?}
-    case $res in
-        2) touch "$1"; continue ;;
-        *) exit 1
-    esac
+    touch "$1"
+    echo "Skipping video: $2"
+    continue
 }
 
 function process_url_list() {
     local url_list="$1"
     local dataset_dir="$2"
-    local file_no=0
+    #local file_no=0
+
+
+    # find current video
+    local file_no=$(find data/train -regextype egrep -regex ".*[0-9]{6}" -print0 |\
+        grep --text --perl-regexp --only-matching ".{6}\x00" |\
+        tr -d '\n' |\
+        sort -zr |\
+        cut -c -6 |\
+        sed 's/^[^1-9]*//;s/^$/0/')
 
     cut -d' ' -f2 "$url_list" > "${dataset_dir}/labels.txt"
     while read -u 3 -r url; do
+        let ++file_no #XXX
         local clip_dir="$dataset_dir/$(printf %06d $file_no)"
-        let ++file_no
         if [ ! -e "$clip_dir" ]; then
+            echo "Starting video $file_no"
             set +e
             # you-get behaves oddly in a subshell
-            download_video "$url" || skip_video "$clip_dir"
+            download_video "$url" || skip_video "$clip_dir" "unavailable"
             local video=$(echo "${TMPDIR}/video."*)
+            is_video "$video" || skip_video "$clip_dir" "corrupt/missing"
             set -e
             local fps=$(get_fps "$video") # XXX: this always has exit code 0?
             valid_fps "$fps"
             set +e
             split_video_into_clips "$video" "$fps" "$clip_dir"
-            set -e
             local res=$?
+            set -e
             rm "$video"
-            [ $res -eq 0 ] || skip_video "$clip_dir" $res
+            [ $res -eq 0 ] || skip_video "$clip_dir" "too short"
+            echo "Finished video $file_no"
+        else
+            echo "Video $file_no exists - skipping"
         fi
-    done 3<<<"$(cut -d' ' -f1 "$url_list")"
+    done 3<<<"$(tail --lines=+"$file_no" "$url_list" | cut -d' ' -f1)"
+    echo "Finished!"
     #done 3<"$TMPDIR/vidlist"
 }
 
