@@ -61,6 +61,8 @@ function get_fps() {
 }
 
 function get_length() {
+    # from
+    # https://superuser.com/questions/650291/how-to-get-video-duration-in-seconds
     ffprobe -v error \
             -show_entries format=duration \
             -of default=noprint_wrappers=1:nokey=1\
@@ -115,10 +117,39 @@ function split_video_into_clips() {
     return $res
 }
 
+function split_video_into_clips_2() {
+    local video="$1"
+    local clip_dir="$2"
+    local frame_dir="${TMPDIR}"
+
+    local length=$(get_length ${video})
+
+    local times=$()
+    local frame_format="%03d.jpg"
+
+    local counter=0
+    while read -u 3 -r start; do
+        ! mkdir -p "${clip_dir}/${counter}"
+        ffmpeg -v error\
+               -i "$video"\
+               -ss "$start"\
+               -t "$SECONDS_PER_CLIP"\
+               -vf scale="$OUTPUT_VIDEO_SCALE"\
+               "${clip_dir}/${counter}/$frame_format"
+
+        let ++counter
+    done 3<<<$(env python3 gen_clip_times.py $length $SECONDS_PER_CLIP $N_CLIPS)
+
+    if [ ! -d "${clip_dir}/$((counter-1))"\
+        -o $(find "${clip_dir}/$((counter-1))" -iname "*jpg" | wc -l) -eq 0 ]; then
+        echo "Failed to convert video"
+        exit 1;
+    fi
+}
+
 function skip_video() {
     touch "$1"
     echo "Skipping video: $2"
-    continue
 }
 
 function process_url_list() {
@@ -133,33 +164,46 @@ function process_url_list() {
         tr -d '\n' |\
         sort -zr |\
         cut -c -6 |\
-        sed 's/^[^1-9]*//;s/^$/0/')
+        sed 's/^[^1-9]*//')
 
     cut -d' ' -f2 "$url_list" > "${dataset_dir}/labels.txt"
     while read -u 3 -r url; do
-        let ++file_no #XXX
-        local clip_dir="$dataset_dir/$(printf %06d $file_no)"
+        let current_file=file_no++ ||:
+        local clip_dir="$dataset_dir/$(printf %06d $current_file)"
         if [ ! -e "$clip_dir" ]; then
-            echo "Starting video $file_no"
+            echo "Starting video $current_file"
+
             set +e
+
             # you-get behaves oddly in a subshell
-            download_video "$url" || skip_video "$clip_dir" "unavailable"
+            download_video "$url"\
+                || { skip_video "$clip_dir" "unavailable"; continue; }
+
             local video=$(echo "${TMPDIR}/video."*)
-            is_video "$video" || skip_video "$clip_dir" "corrupt/missing"
+            is_video "$video"\
+                || { skip_video "$clip_dir" "corrupt/missing"; continue; }
+
             set -e
-            local fps=$(get_fps "$video") # XXX: this always has exit code 0?
-            valid_fps "$fps"
-            set +e
-            split_video_into_clips "$video" "$fps" "$clip_dir"
+
+            #set +e
+            #local fps=$(get_fps "$video") # XXX: this always has exit code 0?
+            #valid_fps "$fps"
+
+            #split_video_into_clips "$video" "$fps" "$clip_dir"
+            #set -e
+
+            split_video_into_clips_2 "$video" "$clip_dir"
             local res=$?
-            set -e
+
             rm "$video"
-            [ $res -eq 0 ] || skip_video "$clip_dir" "too short"
-            echo "Finished video $file_no"
+            [ $res -eq 0 ]\
+                || { skip_video "$clip_dir" "too short"; continue; }
+
+            echo "Finished video $current_file"
         else
-            echo "Video $file_no exists - skipping"
+            echo "Video $current_file exists - skipping"
         fi
-    done 3<<<"$(tail --lines=+"$file_no" "$url_list" | cut -d' ' -f1)"
+    done 3<<<"$(tail --lines=+"${file_no:=0}" "$url_list" | cut -d' ' -f1)"
     echo "Finished!"
     #done 3<"$TMPDIR/vidlist"
 }
