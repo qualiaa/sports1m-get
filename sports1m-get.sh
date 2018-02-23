@@ -131,6 +131,8 @@ function split_video_into_clips_2() {
     local frame_format="%03d.jpg"
 
     local counter=0
+    OFS="$IFS"
+    IFS="\n "
     while read -u 3 -r start; do
         ! mkdir -p "${clip_dir}/${counter}"
         ffmpeg -v error\
@@ -142,6 +144,7 @@ function split_video_into_clips_2() {
 
         let ++counter
     done 3<<<$(env python3 gen_clip_times.py $length $SECONDS_PER_CLIP $N_CLIPS)
+    IFS="$OFS"
 
     if [ ! -d "${clip_dir}/$((counter-1))"\
         -o $(find "${clip_dir}/$((counter-1))" -iname "*jpg" | wc -l) -eq 0 ]; then
