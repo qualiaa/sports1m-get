@@ -12,7 +12,7 @@ readonly ERRFILE=err.log
 readonly TMPDIR=$(mktemp -d)
 
 
-readonly YOUTUBE_ERRORS="copyright grounds|removed|in your country|duplicate|unavailable|copyright infringement|available"
+readonly YOUTUBE_ERRORS="payment|content|copyright grounds|removed|in your country|duplicate|unavailable|copyright infringement|available"
 
 
 set -euo pipefail 
@@ -66,10 +66,11 @@ function _dl_command() {
 
 function download_video() {
     local url="$1"
+    echo $url
 
 
     if ! _dl_command "$url" 2>"$ERRFILE"; then
-        if grep -Eq "$YOUTUBE_ERRORS" "$ERRFILE"; then
+        if grep -Eiq "$YOUTUBE_ERRORS" "$ERRFILE"; then
             return 1
         elif grep -Eq " oops," "$ERRFILE"; then
             local retries=1
