@@ -11,6 +11,8 @@
 : ${ERRFILE:=err.log}
 : ${TMPDIR:=$(mktemp -d)}
 
+: ${MAX_FILES:=}
+
 readonly SPORTS1M_DIR OUTPUT_DIR SECONDS_PER_CLIP N_CLIPS URL_LIST_DIR\
     URL_LIST_SUFFIX OUTPUT_VIDEO_SCALE ERRFILE TMPDIR
 
@@ -206,7 +208,6 @@ function process_url_list() {
         fi
     done 3<<<"$(tail --lines=+"${file_no:=0}" "$url_list" | cut -d' ' -f1)"
     echo "Finished!"
-    #done 3<"$TMPDIR/vidlist"
 }
 
 
@@ -216,6 +217,12 @@ function process_url_list() {
 #for dataset in train test; do
 for dataset in train; do
     url_list="${URL_LIST_DIR}/${dataset}${URL_LIST_SUFFIX}"
+
+    if [ -n "$MAX_FILES" ]; then
+        head --lines="$MAX_FILES" "$url_list" > "${TMPDIR}/working_list"
+        url_list="${TMPDIR}/working_list"
+    fi
+
     dataset_dir="${OUTPUT_DIR}/$dataset"
     ! mkdir "$dataset_dir" 2>&-
     process_url_list "$url_list" "$dataset_dir"
