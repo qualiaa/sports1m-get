@@ -127,12 +127,15 @@ function split_video_into_clips_2() {
 
     local length=$(get_length ${video})
 
-    local times=$()
     local frame_format="%03d.jpg"
 
     local counter=0
+    starts=$(env python3 gen_clip_times.py $length $SECONDS_PER_CLIP $N_CLIPS)
+    [ $? -eq 0 ] || return 1
+
+    
     OFS="$IFS"
-    IFS="\n "
+    IFS=" "$'\n'
     while read -u 3 -r start; do
         ! mkdir -p "${clip_dir}/${counter}"
         ffmpeg -v error\
@@ -141,13 +144,12 @@ function split_video_into_clips_2() {
                -t "$SECONDS_PER_CLIP"\
                -vf scale="$OUTPUT_VIDEO_SCALE"\
                "${clip_dir}/${counter}/$frame_format"
-
         let ++counter
-    done 3<<<$(env python3 gen_clip_times.py $length $SECONDS_PER_CLIP $N_CLIPS)
+    done 3<<<$starts
     IFS="$OFS"
 
-    if [ ! -d "${clip_dir}/$((counter-1))"\
-        -o $(find "${clip_dir}/$((counter-1))" -iname "*jpg" | wc -l) -eq 0 ]; then
+    if [ ! -d "${clip_dir}/$((N_CLIPS-1))"\
+        -o $(find "${clip_dir}/$((N_CLIPS-1))" -iname "*jpg" | wc -l) -eq 0 ]; then
         echo "Failed to convert video"
         exit 1;
     fi
@@ -191,15 +193,17 @@ function process_url_list() {
 
             set -e
 
-            #set +e
             #local fps=$(get_fps "$video") # XXX: this always has exit code 0?
             #valid_fps "$fps"
 
+            set +e
+
             #split_video_into_clips "$video" "$fps" "$clip_dir"
-            #set -e
 
             split_video_into_clips_2 "$video" "$clip_dir"
             local res=$?
+
+            set -e
 
             rm "$video"
             [ $res -eq 0 ]\
