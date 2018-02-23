@@ -162,7 +162,7 @@ function process_url_list() {
 
 
     # find current video
-    local file_no=$(find data/train -regextype egrep -regex ".*[0-9]{6}" -print0 |\
+    local file_no=$(find "$dataset_dir" -regextype egrep -regex ".*[0-9]{6}" -print0 |\
         grep --text --perl-regexp --only-matching ".{6}\x00" |\
         tr -d '\n' |\
         sort -zr |\
