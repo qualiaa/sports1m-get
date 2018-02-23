@@ -1,19 +1,20 @@
 #!/usr/bin/env bash
 
-readonly SPORTS1M_DIR="sports-1m-dataset"
-readonly OUTPUT_DIR="data"
-readonly SECONDS_PER_CLIP=2
-readonly N_CLIPS=5
-readonly URL_LIST_DIR="${SPORTS1M_DIR}/original"
-readonly URL_LIST_SUFFIX="_partition.txt"
-readonly OUTPUT_VIDEO_SCALE="171:128"
+: ${SPORTS1M_DIR:="sports-1m-dataset"}
+: ${OUTPUT_DIR:="data"}
+: ${SECONDS_PER_CLIP:=2}
+: ${N_CLIPS:=5}
+: ${URL_LIST_DIR:="${SPORTS1M_DIR}/original"}
+: ${URL_LIST_SUFFIX:="_partition.txt"}
+: ${OUTPUT_VIDEO_SCALE:="171:128"}
 
-readonly ERRFILE=err.log
-readonly TMPDIR=$(mktemp -d)
+: ${ERRFILE:=err.log}
+: ${TMPDIR:=$(mktemp -d)}
 
+readonly SPORTS1M_DIR OUTPUT_DIR SECONDS_PER_CLIP N_CLIPS URL_LIST_DIR\
+    URL_LIST_SUFFIX OUTPUT_VIDEO_SCALE ERRFILE TMPDIR
 
 readonly YOUTUBE_ERRORS="payment|content|copyright grounds|removed|in your country|duplicate|unavailable|copyright infringement|available"
-
 
 set -euo pipefail 
 
