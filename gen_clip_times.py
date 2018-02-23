@@ -9,5 +9,8 @@ seconds_per_clip = int(sys.argv[2])
 n_clips  = int(sys.argv[3])
 
 
-for interval in random_intervals(length,seconds_per_clip,n_clips):
-    print(interval.start)
+try:
+    for interval in random_intervals(length,seconds_per_clip,n_clips):
+        print(interval.start)
+except ValueError:
+    sys.exit(2)
