@@ -139,8 +139,8 @@ function split_video_into_clips_2() {
     while read -u 3 -r start; do
         ! mkdir -p "${clip_dir}/${counter}"
         ffmpeg -v error\
-               -i "$video"\
                -ss "$start"\
+               -i "$video"\
                -t "$SECONDS_PER_CLIP"\
                -vf scale="$OUTPUT_VIDEO_SCALE"\
                "${clip_dir}/${counter}/$frame_format"
