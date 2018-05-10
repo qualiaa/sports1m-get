@@ -103,7 +103,7 @@ function split_video_into_clips() {
     local clip_dir="$3"
     local frames_per_clip=$((SECONDS_PER_CLIP * fps))
     local frame_dir="${TMPDIR}"
-    local frame_format="frame%06d.jpg"
+    local frame_format="frame%06d.png"
 
     ffmpeg -v error\
            -i "$video"\
@@ -127,7 +127,7 @@ function split_video_into_clips_2() {
 
     local length=$(get_length ${video})
 
-    local frame_format="%03d.jpg"
+    local frame_format="%03d.png"
 
     local counter=0
     starts=$(env python3 gen_clip_times.py $length $SECONDS_PER_CLIP $N_CLIPS) \
@@ -139,8 +139,8 @@ function split_video_into_clips_2() {
     while read -u 3 -r start; do
         ! mkdir -p "${clip_dir}/${counter}"
         ffmpeg -v error\
-               -i "$video"\
                -ss "$start"\
+               -i "$video"\
                -t "$SECONDS_PER_CLIP"\
                -vf scale="$OUTPUT_VIDEO_SCALE"\
                "${clip_dir}/${counter}/$frame_format"
@@ -149,7 +149,7 @@ function split_video_into_clips_2() {
     IFS="$OFS"
 
     if [ ! -d "${clip_dir}/$((N_CLIPS-1))"\
-        -o $(find "${clip_dir}/$((N_CLIPS-1))" -iname "*jpg" | wc -l) -eq 0 ]; then
+        -o $(find "${clip_dir}/$((N_CLIPS-1))" -iname "*png" | wc -l) -eq 0 ]; then
         echo "Failed to convert video"
         exit 1;
     fi
@@ -160,6 +160,28 @@ function skip_video() {
     echo "Skipping video: $2"
 }
 
+function count_files() {
+    # v3
+    local count_file="$1/num_vids"
+    if [ -f "$dataset_dir/num_vids" ]; then
+        cat "$dataset_dir/num_vids"
+    else
+        echo 0
+    fi
+
+    # v2
+#   ls -l data/train/ | sed -En '/total/d;s/^.* ([0-9]{6})[ \t]*$/\1/p' | wc -l
+
+    # v1
+#   find "$dataset_dir" -regextype egrep -regex ".*[0-9]{6}" -print0 |\
+#       grep --text --perl-regexp --only-matching ".{6}\x00" |\
+#       tr -d '\n' |\
+#       sort -zr |\
+#       cut -c -6 |\
+#       sed 's/^[^1-9]*//'
+}
+
+
 function process_url_list() {
     local url_list="$1"
     local dataset_dir="$2"
@@ -167,17 +189,14 @@ function process_url_list() {
 
 
     # find current video
-    local file_no=$(find "$dataset_dir" -regextype egrep -regex ".*[0-9]{6}" -print0 |\
-        grep --text --perl-regexp --only-matching ".{6}\x00" |\
-        tr -d '\n' |\
-        sort -zr |\
-        cut -c -6 |\
-        sed 's/^[^1-9]*//')
+    local file_no=$(count_files "$dataset_dir")
+    echo "$file_no"
 
     cut -d' ' -f2 "$url_list" > "${dataset_dir}/labels.txt"
     while read -u 3 -r url; do
         let current_file=file_no++ ||:
-        local clip_dir="$dataset_dir/$(printf %06d $current_file)"
+        echo "$current_file" > "$dataset_dir/num_vids"
+        local clip_dir="$dataset_dir/videos/$(printf %06d $current_file)"
         if [ ! -e "$clip_dir" ]; then
             echo "Starting video $current_file"
 
@@ -191,14 +210,14 @@ function process_url_list() {
             is_video "$video"\
                 || { skip_video "$clip_dir" "corrupt/missing"; continue; }
 
-            set -e
+#            set -e
 
-            #local fps=$(get_fps "$video") # XXX: this always has exit code 0?
-            #valid_fps "$fps"
+#            local fps=$(get_fps "$video") # XXX: this always has exit code 0?
+#            valid_fps "$fps"
 
-            set +e
+#            set +e
 
-            #split_video_into_clips "$video" "$fps" "$clip_dir"
+#split_video_into_clips "$video" "$fps" "$clip_dir"
 
             split_video_into_clips_2 "$video" "$clip_dir"
             local res=$?
@@ -253,7 +272,7 @@ done
 #    video=$(echo "${video_dir}/video."*)
 #    format="${video##*.}"
 #    clip_output="${video_dir}/clip%04d.${format}"
-#    frame_output="${video_dir}/frame%06d.jpg"
+#    frame_output="${video_dir}/frame%06d.png"
 #
 #    ffmpeg -v error\
 #           -i "$video"\
@@ -270,7 +289,7 @@ done
 #        ffmpeg -v error\
 #               -i "$clip"\
 #               -vf scale="$SCALE"\
-#               "${clip_dir}/%03d.jpg" || return 1
+#               "${clip_dir}/%03d.png" || return 1
 #        let ++count
 #    done
 #
