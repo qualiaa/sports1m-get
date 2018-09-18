@@ -4,11 +4,12 @@
 : ${OUTPUT_DIR:="data"}
 : ${SECONDS_PER_CLIP:=2}
 : ${N_CLIPS:=5}
+: ${SCRIPTS:=scripts}
 : ${URL_LIST_DIR:="${SPORTS1M_DIR}/original"}
 : ${URL_LIST_SUFFIX:="_partition.txt"}
 : ${OUTPUT_VIDEO_SCALE:="171:128"}
 
-: ${ERRFILE:=err.log}
+: ${ERRFILE:="err.log"}
 : ${TMPDIR:=$(mktemp -d)}
 
 : ${MAX_FILES:=}
@@ -110,7 +111,7 @@ function split_video_into_clips() {
            -vf scale="$OUTPUT_VIDEO_SCALE"\
            "${frame_dir}/$frame_format"
 
-    env python3 extract_clips.py "$frame_dir" "$clip_dir" $frames_per_clip $N_CLIPS
+    env python3 "$SCRIPTS/extract_clips.py" "$frame_dir" "$clip_dir" $frames_per_clip $N_CLIPS
     res=$?
 
     # clean up frame files
@@ -130,7 +131,7 @@ function split_video_into_clips_2() {
     local frame_format="%03d.png"
 
     local counter=0
-    starts=$(env python3 gen_clip_times.py $length $SECONDS_PER_CLIP $N_CLIPS) \
+    starts=$(env python3 "$SCRIPTS/gen_clip_times.py" $length $SECONDS_PER_CLIP $N_CLIPS) \
         || return 1
 
     
