@@ -13,17 +13,19 @@ From the repository root, run
 
 It respects the following environment variables (with defaults)
 
-* `SPORTS1M_DIR` (`"sports-1m-dataset"`)
-* `OUTPUT_DIR` (`"data"`)
-* `SECONDS_PER_CLIP` (`2`)
-* `N_CLIPS` (`5`)
-* `SCRIPTS` (`"scripts"`)
-* `URL_LIST_DIR` (`"${SPORTS1M_DIR}/original"`)
-* `URL_LIST_SUFFIX` (`"_partition.txt"`)
-* `OUTPUT_VIDEO_SCALE` (`"171:128"`)
-* `ERRFILE` (`"err.log"`)
-* `TMPDIR` (`"$(mktemp"`) -d)
-* `MAX_FILES` (*null*)
+Variable               | Default
+-----------------------|--------------------
+ `SPORTS1M_DIR`        | "sports-1m-dataset"
+ `OUTPUT_DIR`          | "data"
+ `SECONDS_PER_CLIP`    | 2
+ `N_CLIPS`             | 5
+ `SCRIPTS`             | "scripts"
+ `URL_LIST_DIR`        | "${SPORTS1M_DIR}/original"
+ `URL_LIST_SUFFIX`     | "_partition.txt"
+ `OUTPUT_VIDEO_SCALE`  | "171:128"
+ `ERRFILE`             | "err.log"
+ `TMPDIR`              | $(mktemp -d)
+ `MAX_FILES`           | *null*
 
 ## Dependencies
 
